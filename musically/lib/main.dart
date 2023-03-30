@@ -29,7 +29,6 @@ class MyApp extends StatelessWidget {
 
 class Playlist extends StatelessWidget {
   const Playlist();
-
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -37,8 +36,8 @@ class Playlist extends StatelessWidget {
       children: [
         Container(
           margin: EdgeInsets.fromLTRB(10, 0, 0, 0),
-          height: 200,
-          width: 200,
+          height: 130,
+          width: 130,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             color: Colors.grey[400],
@@ -54,7 +53,7 @@ final player = AudioPlayer();
 void playsound(String url) async {
   try {
     player.setAudioSource(AudioSource.uri(Uri.parse(url)));
-    player.play();
+    //player.play();
   } on Exception {
     log("Error parsing song");
     // TODO
@@ -148,6 +147,13 @@ class AllSongsPage extends StatefulWidget {
 
 class _AllSongsPageState extends State<AllSongsPage> {
   final OnAudioQuery _audioQuery = OnAudioQuery();
+  bool _playing = false;
+
+  void _isPlaying() {
+    setState(() {
+      _playing = !_playing;
+    });
+  }
 
   @override
   void initState() {
@@ -195,31 +201,38 @@ class _AllSongsPageState extends State<AllSongsPage> {
           Column(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                 Text(
-                  "P L A Y L I S T S",
+                  "Playlists",
                   style: GoogleFonts.oxygen(
                     textStyle:
                         TextStyle(fontSize: 26, fontWeight: FontWeight.w900),
                   ),
                 ),
+                Icon(
+                  Icons.add_box_rounded,
+                  size: 26,
+                )
               ]),
               SizedBox(height: 30),
               Container(
-                height: 200,
-                child: ListView(
-                  // This next line does the trick.
-                  scrollDirection: Axis.horizontal,
-                  children: <Widget>[
-                    Playlist(),
-                    Playlist(),
-                    Playlist(),
-                    Playlist(),
-                    Playlist(),
-                  ],
-                ),
+                height: 150,
+                child: ListView.builder(
+                    // This next line does the trick.
+                    scrollDirection: Axis.horizontal,
+                    itemCount: 10,
+                    itemBuilder: ((context, index) => Playlist())),
               ),
-              SizedBox(height: 30),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Text(
+                  "Your Songs",
+                  style: GoogleFonts.oxygen(
+                      textStyle:
+                          TextStyle(fontSize: 26, fontWeight: FontWeight.w900)),
+                ),
+                Icon(Icons.sort_rounded, size: 26)
+              ]),
+              SizedBox(height: 26),
               Container(
                 height: 373,
                 child: FutureBuilder<List<SongModel>>(
@@ -232,8 +245,6 @@ class _AllSongsPageState extends State<AllSongsPage> {
                     builder: (context, item) {
                       if (item.data == null)
                         return const CircularProgressIndicator();
-                      // When you try "query" without asking for [READ] or [Library] permission
-                      // the plugin will return a [Empty] list.
                       if (item.data!.isEmpty)
                         return const Text("Nothing found!");
                       return ListView.builder(
@@ -243,16 +254,27 @@ class _AllSongsPageState extends State<AllSongsPage> {
                             title: Text(item.data![index].title),
                             subtitle:
                                 Text(item.data![index].artist ?? "No Artist"),
-                            trailing: const Icon(Icons.arrow_forward_rounded),
+                            trailing: GestureDetector(
+                              onTap: () {
+                                playsound(item.data![index].uri.toString());
+                                setState(() {
+                                  _playing = !_playing;
+                                });
+                                _playing ? player.play() : player.pause();
+                              },
+                              child: Icon(
+                                _playing
+                                    ? Icons.pause
+                                    : Icons.play_arrow_rounded,
+                                size: 30,
+                              ),
+                            ),
                             // This Widget will query/load image. Just add the id and type.
                             // You can use/create your own widget/method using [queryArtwork].
                             leading: QueryArtworkWidget(
                               id: item.data![index].id,
                               type: ArtworkType.AUDIO,
                             ),
-                            onTap: () {
-                              playsound(item.data![index].uri.toString());
-                            },
                           );
                         },
                       );
