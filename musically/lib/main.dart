@@ -6,6 +6,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import "Song.dart";
 import 'dart:async';
+import "SongDB.dart";
 import 'dart:developer';
 
 void main() {
@@ -68,7 +69,8 @@ class Sample extends StatelessWidget {
   SongModel model;
   bool playing = false;
   int id;
-  Sample({required this.model, required this.id});
+  AudioPlayer player;
+  Sample({required this.model, required this.id, required this.player});
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -263,12 +265,13 @@ class _AllSongsPageState extends State<AllSongsPage> {
               Container(
                 height: 373,
                 child: FutureBuilder<List<SongModel>>(
-                    future: _audioQuery.querySongs(
+                    future: songs,
+                    /*_audioQuery.querySongs(
                       sortType: null,
                       orderType: OrderType.ASC_OR_SMALLER,
                       uriType: UriType.EXTERNAL,
                       ignoreCase: true,
-                    ),
+                    ),*/
                     builder: (context, item) {
                       if (item.data == null)
                         return const CircularProgressIndicator();
@@ -280,6 +283,7 @@ class _AllSongsPageState extends State<AllSongsPage> {
                           return Sample(
                             model: item.data![index],
                             id: index + 1,
+                            player: player,
                           ) /*ListTile(
                             title: Text(item.data![index].title),
                             subtitle:

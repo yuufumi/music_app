@@ -1,5 +1,6 @@
 import "package:flutter/material.dart";
 import "package:just_audio/just_audio.dart";
+import "package:musically/SongDB.dart";
 import "package:musically/main.dart";
 import "package:on_audio_query/on_audio_query.dart";
 import "new_box.dart";
@@ -14,13 +15,76 @@ class Song extends StatefulWidget {
 }
 
 class _SongState extends State<Song> {
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  Duration _duration = const Duration();
+  Duration _position = const Duration();
+  void playsong(String url, AudioPlayer player) async {
+    try {
+      player.setAudioSource(AudioSource.uri(Uri.parse(url)));
+      //player.play();
+    } on Exception {
+      print("Error parsing song");
+      // TODO
+    }
+  }
 
+  QueryArtworkWidget getImage(SongModel song) {
+    return QueryArtworkWidget(
+      id: song.id,
+      type: ArtworkType.AUDIO,
+      artworkBorder: BorderRadius.circular(10),
+    );
+  }
+
+  String durationInHms(Duration duration) {
+    if (duration.inHours == 0) {
+      if (duration.inMinutes % 60 < 10 && duration.inSeconds % 60 < 10) {
+        return "0${duration.inMinutes % 60}:0${duration.inSeconds % 60}";
+      } else if (duration.inSeconds % 60 < 10) {
+        return "${duration.inMinutes % 60}:0${duration.inSeconds % 60}";
+      } else if (duration.inMinutes % 60 < 10) {
+        return "0${duration.inMinutes % 60}:${duration.inSeconds % 60}";
+      } else {
+        return "${duration.inMinutes % 60}:${duration.inSeconds % 60}";
+      }
+    } else {
+      if (duration.inMinutes % 60 < 10 && duration.inSeconds % 60 < 10) {
+        return "${duration.inHours}:0${duration.inMinutes % 60}:0${duration.inSeconds % 60}";
+      } else if (duration.inSeconds % 60 < 10) {
+        return "${duration.inHours}:${duration.inMinutes % 60}:0${duration.inSeconds % 60}";
+      } else if (duration.inMinutes % 60 < 10) {
+        return "${duration.inHours}:0${duration.inMinutes % 60}:${duration.inSeconds % 60}";
+      } else {
+        return "${duration.inHours}:${duration.inMinutes % 60}:${duration.inSeconds % 60}";
+      }
+    }
+  }
+
+  void changeToSeconds(int seconds) {
+    Duration duration = Duration(seconds: seconds);
+    widget.model.player.seek(duration);
+  }
+
+  QueryArtworkWidget? image;
   @override
   void initState() {
     super.initState();
-    playsound(widget.model.model.uri.toString(), _audioPlayer);
-    _audioPlayer.play();
+    image = getImage(widget.model.model);
+    playsong(widget.model.model.uri.toString(), widget.model.player);
+    widget.model.player.durationStream.listen((d) {
+      if (this.mounted) {
+        setState(() {
+          _duration = d!;
+        });
+      }
+    });
+    widget.model.player.positionStream.listen((p) {
+      if (this.mounted) {
+        setState(() {
+          _position = p;
+        });
+      }
+    });
+    widget.model.player.play();
     widget.model.playing = true;
   }
 
@@ -37,7 +101,7 @@ class _SongState extends State<Song> {
             children: [
               GestureDetector(
                 onTap: () {
-                  _audioPlayer.pause();
+                  //widget.model.player.pause();
                   Navigator.pop(context);
                 },
                 child: neuBox(
@@ -80,11 +144,7 @@ class _SongState extends State<Song> {
                     child: Container(
                       height: 230,
                       width: 280,
-                      child: QueryArtworkWidget(
-                        id: widget.model.model.id,
-                        type: ArtworkType.AUDIO,
-                        artworkBorder: BorderRadius.circular(10),
-                      ),
+                      child: image,
                     ),
                   ),
                 ),
@@ -123,26 +183,41 @@ class _SongState extends State<Song> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                Text("00:00"),
+                Text(durationInHms(_position)),
                 Icon(Icons.shuffle),
                 Icon(Icons.repeat),
-                Text("04:22"),
+                Text(durationInHms(_duration)),
               ],
             ),
             SizedBox(height: 25),
             //process bar
             neuBox(
               child: Container(
-                width: 340,
-                height: 20,
-                child: LinearPercentIndicator(
+                  width: 320,
+                  height: 20,
+                  child: Slider(
+                    activeColor: Colors.pink,
+                    inactiveColor: Colors.transparent,
+                    thumbColor: Colors.grey[300],
+                    secondaryActiveColor: Colors.transparent,
+                    min: Duration(microseconds: 0).inSeconds.toDouble(),
+                    value: _position.inSeconds.toDouble(),
+                    max: _duration.inSeconds.toDouble(),
+                    onChanged: (value) {
+                      setState(() {
+                        changeToSeconds(value.toInt());
+                        value = value;
+                      });
+                    },
+                  )
+                  /*LinearPercentIndicator(
                   lineHeight: 10,
-                  percent: 0.8,
+                  percent: 0.7,
                   backgroundColor: Colors.transparent,
                   barRadius: Radius.circular(8),
                   progressColor: Colors.pink,
-                ),
-              ),
+                ),*/
+                  ),
             ),
           ],
         ),
@@ -155,7 +230,16 @@ class _SongState extends State<Song> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 GestureDetector(
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => Song(
+                          model: widget.model,
+                        ),
+                      ),
+                    );
+                  },
                   child: Expanded(
                     child: Container(
                       child: neuBox(
@@ -172,8 +256,8 @@ class _SongState extends State<Song> {
                       widget.model.playing = !widget.model.playing;
                     });
                     widget.model.playing
-                        ? _audioPlayer.play()
-                        : _audioPlayer.pause();
+                        ? widget.model.player.play()
+                        : widget.model.player.pause();
                   },
                   child: Expanded(
                     child: Container(
@@ -190,7 +274,17 @@ class _SongState extends State<Song> {
                   ),
                 ),
                 GestureDetector(
-                  onTap: () {},
+                  onTap: () {
+                    widget.model.player.seekToNext();
+                    /*Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => Song(
+                          model: widget.model.model,
+                        ),
+                      ),
+                    );*/
+                  },
                   child: Expanded(
                     child: Container(
                       child: neuBox(
