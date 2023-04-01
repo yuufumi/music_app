@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:musically/new_box.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import "Song.dart";
 import 'dart:async';
 import 'dart:developer';
 
@@ -49,8 +51,8 @@ class Playlist extends StatelessWidget {
   }
 }
 
-final player = AudioPlayer();
-void playsound(String url) async {
+//final player = AudioPlayer();
+void playsound(String url, AudioPlayer player) async {
   try {
     player.setAudioSource(AudioSource.uri(Uri.parse(url)));
     //player.play();
@@ -60,81 +62,106 @@ void playsound(String url) async {
   }
 }
 
+AudioPlayer player = AudioPlayer();
+
 class Sample extends StatelessWidget {
-  const Sample();
+  SongModel model;
+  bool playing = false;
+  int id;
+  Sample({required this.model, required this.id});
   @override
   Widget build(BuildContext context) {
-    return Container(
-        margin: EdgeInsets.fromLTRB(0, 0, 0, 30),
-        height: 100,
-        width: 400,
-        decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10),
-            color: Colors.grey[200],
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.grey.shade500,
-                  offset: Offset(4, 4),
-                  blurRadius: 15,
-                  spreadRadius: 1),
-              BoxShadow(
-                color: Colors.white,
-                offset: Offset(-4, -4),
-                blurRadius: 5,
-              ),
-            ]),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            SizedBox(
-              width: 10,
-            ),
-            Text(
-              "1",
-              style: GoogleFonts.oxygen(
-                  textStyle:
-                      TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-            ),
-            const VerticalDivider(
-              width: 20,
-              thickness: 1,
-              indent: 20,
-              endIndent: 20,
-              color: Colors.grey,
-            ),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  "Title of sample",
-                  style: GoogleFonts.oxygen(
-                      textStyle:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                ),
-                Text(
-                  "Song category - duration",
-                  style: GoogleFonts.oxygen(
-                      textStyle:
-                          TextStyle(fontSize: 16, fontWeight: FontWeight.w200)),
-                ),
-              ],
-            ),
-            MaterialButton(
-              onPressed: () {
-                playsound("ohgihiu");
-              },
-              elevation: 0.5,
-              height: 60,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(100)),
-              child: Icon(
-                Icons.play_circle_fill_rounded,
-                size: 60,
-                color: Colors.cyan[900],
-              ),
-            )
-          ],
-        ));
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => Song(
+                      model: this,
+                    )));
+      },
+      child: Column(
+        children: [
+          neuBox(
+            child: Container(
+                margin: EdgeInsets.fromLTRB(0, 10, 0, 10),
+                height: 80,
+                width: 400,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    SizedBox(
+                      width: 10,
+                    ),
+                    Text(
+                      this.id.toString(),
+                      style: GoogleFonts.oxygen(
+                          textStyle: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.pink)),
+                    ),
+                    const VerticalDivider(
+                      width: 20,
+                      thickness: 1,
+                      indent: 20,
+                      endIndent: 20,
+                      color: Colors.pink,
+                    ),
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 200,
+                          child: Text(
+                            model.title,
+                            overflow: TextOverflow.ellipsis,
+                            softWrap: false,
+                            style: GoogleFonts.oxygen(
+                                textStyle: TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 200,
+                          child: Text(
+                            "${model.artist}  - ${model.duration}",
+                            style: GoogleFonts.oxygen(
+                                textStyle: TextStyle(
+                                    fontSize: 16, fontWeight: FontWeight.w200)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    MaterialButton(
+                      onPressed: () {
+                        playing = !playing;
+                        playsound(model.uri.toString(), player);
+                        print(playing);
+                        playing ? player.play() : player.pause();
+                      },
+                      elevation: 0.5,
+                      height: 60,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(100)),
+                      child: Icon(
+                        playing
+                            ? Icons.pause_circle_filled_rounded
+                            : Icons.play_circle_fill_rounded,
+                        size: 60,
+                        color: Colors.pink,
+                      ),
+                    )
+                  ],
+                )),
+          ),
+          SizedBox(
+            height: 20,
+          )
+        ],
+      ),
+    );
   }
 }
 
@@ -250,7 +277,10 @@ class _AllSongsPageState extends State<AllSongsPage> {
                       return ListView.builder(
                         itemCount: item.data!.length,
                         itemBuilder: (context, index) {
-                          return ListTile(
+                          return Sample(
+                            model: item.data![index],
+                            id: index + 1,
+                          ) /*ListTile(
                             title: Text(item.data![index].title),
                             subtitle:
                                 Text(item.data![index].artist ?? "No Artist"),
@@ -275,7 +305,8 @@ class _AllSongsPageState extends State<AllSongsPage> {
                               id: item.data![index].id,
                               type: ArtworkType.AUDIO,
                             ),
-                          );
+                          )*/
+                              ;
                         },
                       );
                     }),
